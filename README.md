@@ -1,5 +1,4 @@
----
-
+_( formatted in [markdown](http://daringfireball.net/projects/markdown/) )_
 
 On this page...
 ===============
@@ -66,7 +65,9 @@ Notes
 
 - \_\_init\_\_() attributes, and module functions, are ordered via above api flow.
 
-- asserts at beginning of functions document expected context.
+- attributes in caps can be passed in via settings.
+
+- __asserts__ at beginning of functions document expected context.
 
 - given above api flow, _both_ the monitor-isbn-search and monitor-record-id-search functions below allow
   optional specification of TIMEOUT and check-INTERVAL values.
@@ -75,7 +76,11 @@ Notes
  
         ValueError: Invalid control character at: line x column y (char z)
   
-- rich information about the search/request process can be gleaned by pprint( bd.\_\_dict\_\_ )
+- rich information about the search/request process can be gleaned via pprint( bd.\_\_dict\_\_ )
+
+- contact info: 
+    - borrowdirect/library info: bonnie_buzzell@brown.edu, knowledge-systems librarian
+    - code: birkin_diana@brown.edu, programmer
 
 ---
 
@@ -103,7 +108,5 @@ Human readable summary:
     - Share Alike — If you alter, transform, or build upon this work, 
       you may distribute the resulting work only under the same 
       or similar license to this one.  
-
----
 
 ---
