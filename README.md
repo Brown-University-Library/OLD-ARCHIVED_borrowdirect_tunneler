@@ -1,5 +1,6 @@
 ---
 
+
 On this page...
 ===============
 
@@ -8,6 +9,7 @@ On this page...
 - License
 
 ---
+  
   
 Common usage
 ============
@@ -49,6 +51,7 @@ Common usage
 
 ---
 
+
 Notes
 =====
 
@@ -75,6 +78,7 @@ Notes
 - rich information about the search/request process can be gleaned by pprint( bd.\_\_dict\_\_ )
 
 ---
+
 
 License
 =======
