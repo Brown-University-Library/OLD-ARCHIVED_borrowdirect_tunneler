@@ -78,6 +78,8 @@ Notes
   
 - rich information about the search/request process can be gleaned via pprint( bd.\_\_dict\_\_ )
 
+- dependencies: [requests](http://docs.python-requests.org/en/latest/index.html) 
+
 - contact info: 
     - borrowdirect/library info: bonnie_buzzell@brown.edu, knowledge-systems librarian
     - code: birkin_diana@brown.edu, programmer
