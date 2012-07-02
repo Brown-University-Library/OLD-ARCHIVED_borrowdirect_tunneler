@@ -317,33 +317,32 @@ class BdTunnelerTests( unittest.TestCase ):
   #   assert bd.is_requestable == True or bd.is_requestable == False, bd.is_requestable
   #   assert bd.request_transaction_num == u'unknown' or bd.request_transaction_num[0:3] == u'BRO', bd.request_transaction_num
 
-  def test_Request_DEV(self):
-    '''
-    Tests common-case wrapper function.
-    WARNING -- THIS WILL REALLY SUBMIT A REQUEST!
-    '''
-    settings = {
-      u'BD_API_URL': module_settings.BD_API_URL_DEV,
-      u'PATRON_BARCODE': module_settings.LEGIT_PATRON_BARCODE,
-      u'UNIVERSITY_CODE': module_settings.LEGIT_UNIVERSITY_CODE,
-      u'REQUESTED_ISBN': u'9780688002305',  # ZMM, http://www.worldcat.org/oclc/673595
-      u'COMMAND': u'request',
-      u'REQUEST_PICKUP_LOCATION': u'Rockefeller Library' }
-    bd = BD_Tunneler( settings )
-    assert bd.found == None, bd.found
-    assert bd.is_requestable == None, bd.is_requestable
-    assert bd.request_transaction_num == None, bd.request_transaction_num
-    bd.request()
-    # print u'\n- bd.__dict__:'; pprint.pprint(bd.__dict__)
-    assert bd.found == True or bd.found == False, bd.found
-    assert bd.is_requestable == True or bd.is_requestable == False, bd.is_requestable
-    assert bd.request_transaction_num == u'unknown' or bd.request_transaction_num[0:3] == u'BRO', bd.request_transaction_num
+  # def test_Request_DEV(self):
+  #   '''
+  #   Tests common-case wrapper function.
+  #   WARNING -- at some point, THIS WILL REALLY SUBMIT A REQUEST!
+  #   '''
+  #   settings = {
+  #     u'BD_API_URL': module_settings.BD_API_URL_DEV,
+  #     u'PATRON_BARCODE': module_settings.LEGIT_PATRON_BARCODE,
+  #     u'UNIVERSITY_CODE': module_settings.LEGIT_UNIVERSITY_CODE,
+  #     u'REQUESTED_ISBN': u'9780688002305',  # ZMM, http://www.worldcat.org/oclc/673595
+  #     u'COMMAND': u'request',
+  #     u'REQUEST_PICKUP_LOCATION': u'Rockefeller Library' }
+  #   bd = BD_Tunneler( settings )
+  #   assert bd.found == None, bd.found
+  #   assert bd.is_requestable == None, bd.is_requestable
+  #   assert bd.request_transaction_num == None, bd.request_transaction_num
+  #   bd.request()
+  #   # print u'\n- bd.__dict__:'; pprint.pprint(bd.__dict__)
+  #   assert bd.found == True or bd.found == False, bd.found
+  #   assert bd.is_requestable == True or bd.is_requestable == False, bd.is_requestable
+  #   assert bd.request_transaction_num == u'unknown' or bd.request_transaction_num[0:3] == u'BRO', bd.request_transaction_num
     
   # end class BdTunnelerTests()
     
     
 if __name__ == "__main__":
-  # import bd_tunneler
   from bd_tunneler import BD_Tunneler
   import bd_tunneler_module_local_settings as module_settings  # module_settings only needed for tests
   activate_this = module_settings.VIRTUALENV_PATH
