@@ -1,5 +1,13 @@
 _( formatted in [markdown](http://daringfireball.net/projects/markdown/) )_
 
+About
+=====
+
+'bd_tunneler' faciliates programmatic access to 'BorrowDirect', an accademic book-borrowing consortium.
+
+---
+
+
 On this page...
 ===============
 
@@ -65,11 +73,21 @@ Notes
 
 - \_\_init\_\_() attributes, and module functions, are ordered via above api flow.
 
-- attributes in caps can be passed in via settings.
+- attributes in caps can be passed; others are populated by program-flow.
+
+- settings-handling is flexible, a dict (shown in example) or module or module-path or nothing can be passed in.
+
+  - "nothing?" Sure...
+
+            >>> bd = BD_Tunneler()
+            >>> bd.BD_API_URL = u'a'; bd.PATRON_BARCODE = u'b'; bd.UNIVERSITY_CODE = u'c'; etc...
+            >>> bd.request()
+            
+  - ...or settings & attribute-assignments can be mixed & matched.
 
 - __asserts__ at beginning of functions document expected context.
 
-- given above api flow, _both_ the monitor-isbn-search and monitor-record-id-search functions below allow
+- given above api flow, _both_ the monitor-isbn-search and monitor-record-id-search functions allow
   optional specification of TIMEOUT and check-INTERVAL values.
 
 - using strict=False for json.loads() because without it, multiple api-hits returned:
@@ -78,7 +96,9 @@ Notes
   
 - rich information about the search/request process can be gleaned via pprint( bd.\_\_dict\_\_ )
 
-- dependencies: [requests](http://docs.python-requests.org/en/latest/index.html) 
+- dependencies: the wonderful [requests](http://docs.python-requests.org/en/latest/index.html) module.
+
+- updated for 2012-08-08 BorrowDirect upgrade.
 
 - contact info: 
     - borrowdirect/library info: bonnie_buzzell@brown.edu, knowledge-systems librarian

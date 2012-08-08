@@ -136,6 +136,8 @@ class BD_Tunneler(object):
     assert len(self.UNIVERSITY_CODE) > 0 and type(self.UNIVERSITY_CODE) == unicode, Exception( u'self.UNIVERSITY_CODE requires a unicode string; it is %s' % self.UNIVERSITY_CODE )
     ## ascertain url type
     if u'borrow-direct' in self.BD_API_URL:  # production
+      command_param_value = u'mkauth'
+    elif u'indexdata' in self.BD_API_URL:  # previous-production
       command_param_value = u'bdauth'
     elif u'bdtest' in self.BD_API_URL:  # development
       command_param_value = u'mkauth'
@@ -146,7 +148,7 @@ class BD_Tunneler(object):
       u'command': command_param_value,
       u'LS': self.UNIVERSITY_CODE,
       u'PI': self.PATRON_BARCODE }
-    r = requests.get( self.BD_API_URL, params=payload )
+    r = requests.get( self.BD_API_URL, params=payload, verify=False )
     self.login_url = r.history[0].url  # the initial assembled url before redirect
     self.cookies_recent = self.makeCookieDict( r )
     self.cookies_history.append( { u'login_new': self.cookies_recent } )
@@ -170,7 +172,7 @@ class BD_Tunneler(object):
       u'command': u'search',
       u'query': u'isbn=%s' % self.REQUESTED_ISBN,
       u'torusquery': u'' }
-    r = requests.get( self.BD_API_URL, cookies=self.cookies_recent, params=payload )
+    r = requests.get( self.BD_API_URL, cookies=self.cookies_recent, params=payload, verify=False )
     self.initiate_search_url = r.url
     self.cookies_history.append( {u'initiate_isbn_search': self.cookies_recent} )
     self.initiate_search_history = r.history
@@ -207,7 +209,7 @@ class BD_Tunneler(object):
       u'type': u'json', }
     ## start monitor requests
     while self.monitor_search_end_time > datetime.datetime.now():
-      r = requests.get( self.BD_API_URL, cookies=self.cookies_recent, params=payload )
+      r = requests.get( self.BD_API_URL, cookies=self.cookies_recent, params=payload, verify=False )
       if self.monitor_search_url == None:
         self.monitor_search_url = r.url
       self.cookies_recent = self.makeCookieDict(r)
@@ -263,7 +265,7 @@ class BD_Tunneler(object):
       u'command': u'record',
       u'id': self.check_records_current_record,
       u'type': u'json' }
-    r = requests.get( self.BD_API_URL, cookies=self.cookies_recent, params=payload )
+    r = requests.get( self.BD_API_URL, cookies=self.cookies_recent, params=payload, verify=False )
     self.check_records_initiation_urls.append( r.url )
     self.cookies_recent = self.makeCookieDict( r )
     self.cookies_history.append( {u'check_records_initiation': self.cookies_recent} )
@@ -288,7 +290,7 @@ class BD_Tunneler(object):
     self.check_records_monitor_current_end_time = self.check_records_monitor_current_start_time + datetime.timedelta( seconds=self.CHECK_RECORDS_MONITOR_TIMEOUT )
     continue_flag = u'continue'
     while continue_flag == u'continue':
-      r = requests.get( self.check_records_initiation_urls[-1], cookies=self.cookies_recent )  # url with parameters set in checkRecords_initiateRecordCheck()
+      r = requests.get( self.check_records_initiation_urls[-1], cookies=self.cookies_recent, verify=False )  # url with parameters set in checkRecords_initiateRecordCheck()
       self.cookies_recent = self.makeCookieDict(r)
       self.cookies_history.append( {u'check_records_monitor': self.cookies_recent} )
       self.check_records_monitor_responses.append( r.content.decode(u'utf-8', u'replace') )
@@ -306,28 +308,31 @@ class BD_Tunneler(object):
     Purpose: Examine the recent check_records_monitor_responses entry to see if the item is requestable.
     Called by: checkRecords()
     '''
-    assert len(self.check_records_monitor_responses) > 0 and type(self.check_records_monitor_responses) == list, Exception( u'self.check_records_monitor_responses must a populated list; it is %s' % self.check_records_monitor_responses )
+    assert len(self.check_records_monitor_responses) > 0 and type(self.check_records_monitor_responses) == list, Exception( u'self.check_records_monitor_responses must be a populated list; it is %s' % self.check_records_monitor_responses )
     jd = json_dict = json.loads( self.check_records_monitor_responses[-1], strict=False )
-    if u'interLibraryLoanInfo' not in jd.keys():
-      self.check_records_evaluation_results.append( { 
-        u'record_id': self.check_records_current_record,
-        u'interLibraryLoanInfo': u'no_info'
-        } )
-      self.is_requestable = False
-    else:
-      if jd[u'interLibraryLoanInfo'][0][u'buttonLabel'] == [u'Request'] and jd[u'interLibraryLoanInfo'][0][u'buttonLink'] == [u'AddRequest']:
+    if u'interLibraryLoanInfo' in jd.keys():
+      if u'buttonLabel' in jd[u'interLibraryLoanInfo'][0].keys():
+        if jd[u'interLibraryLoanInfo'][0][u'buttonLabel'] == [u'Request']:
+          if u'buttonLink' in jd[u'interLibraryLoanInfo'][0].keys():
+            if jd[u'interLibraryLoanInfo'][0][u'buttonLink'] == [u'AddRequest']:
+              self.check_records_evaluation_results.append( { 
+                u'record_id': self.check_records_current_record,
+                u'interLibraryLoanInfo': jd[u'interLibraryLoanInfo']
+                } )
+              self.is_requestable = True
+    if not self.is_requestable == True:
+      if u'interLibraryLoanInfo' in jd.keys():
         self.check_records_evaluation_results.append( { 
           u'record_id': self.check_records_current_record,
-          u'interLibraryLoanInfo': jd[u'interLibraryLoanInfo']
+          u'interLibraryLoanInfo': jd[u'interLibraryLoanInfo']  # for future examination
           } )
-        self.is_requestable = True
       else:
         self.check_records_evaluation_results.append( { 
           u'record_id': self.check_records_current_record,
-          u'interLibraryLoanInfo': jd[u'interLibraryLoanInfo']  # log to gain sense of possibilities
+          u'interLibraryLoanInfo': u'no_info'
           } )
-        self.is_requestable = False
-    return
+      self.is_requestable = False
+    return    
     
     
   def requestInitiate( self ):
@@ -342,12 +347,13 @@ class BD_Tunneler(object):
     payload = {
       u'command': u'relaisaddrequest',
       u'arPickupLocation': self.REQUEST_PICKUP_LOCATION }
-    r = requests.get( self.BD_API_URL, cookies=self.cookies_recent, params=payload )
+    r = requests.get( self.BD_API_URL, cookies=self.cookies_recent, params=payload, verify=False )
     self.request_url = r.url
     self.cookies_recent = self.makeCookieDict(r)
     self.cookies_history.append( {u'request': self.cookies_recent} )
     self.request_response = r.content.decode(u'utf-8', u'replace')
     self.requestEvaluate()  # populates self.request_transaction_num
+    return
     
     
   def requestEvaluate( self ):
@@ -363,7 +369,8 @@ class BD_Tunneler(object):
       self.request_transaction_num = transaction_id.strip()
     else:
       self.request_transaction_num = u'unknown'
-      
+    return
+    
       
   ## common-case wrapper functions
   
