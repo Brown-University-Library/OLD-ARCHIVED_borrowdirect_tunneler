@@ -75,7 +75,7 @@ class BdTunnelerTests( unittest.TestCase ):
     bd.monitorIsbnSearch( interval=2, timeout=15 )
     assert len(bd.monitor_search_recids_found) > 0, bd.monitor_search_responses 
         
-  def test_checkRecords(self):
+  def test_checkRecordIds(self):
     import json
     settings = {
       u'BD_API_URL': module_settings.BD_API_URL,
@@ -90,44 +90,44 @@ class BdTunnelerTests( unittest.TestCase ):
     bd.monitorIsbnSearch()
     assert len(bd.monitor_search_recids_found) > 0, bd.monitor_search_responses
     ## test INITIATE
-    assert bd.check_records_initiation_responses == [], bd.check_records_initiation_responses
-    bd.checkRecords()
-    assert len(bd.check_records_initiation_responses) > 0, bd.check_records_initiation_responses
-    assert type(json.loads(bd.check_records_initiation_responses[0], strict=False)) == dict, type(json.loads(bd.check_records_initiation_responses[0], strict=False))    
+    assert bd.check_recordids_initiation_responses == [], bd.check_recordids_initiation_responses
+    bd.checkRecordIds()
+    assert len(bd.check_recordids_initiation_responses) > 0, bd.check_recordids_initiation_responses
+    assert type(json.loads(bd.check_recordids_initiation_responses[0], strict=False)) == dict, type(json.loads(bd.check_recordids_initiation_responses[0], strict=False))    
     ## test MONITOR
-    assert len(bd.check_records_monitor_responses) > 0, bd.check_records_monitor_responses
-    assert type(json.loads(bd.check_records_monitor_responses[0], strict=False)) == dict, type(json.loads(bd.check_records_monitor_responses[0], strict=False))    
+    assert len(bd.check_recordids_monitor_responses) > 0, bd.check_recordids_monitor_responses
+    assert type(json.loads(bd.check_recordids_monitor_responses[0], strict=False)) == dict, type(json.loads(bd.check_recordids_monitor_responses[0], strict=False))    
     ## test EVALUATE
     assert bd.is_requestable != None
-    assert len(bd.check_records_evaluation_results) > 0
+    assert len(bd.check_recordids_evaluation_results) > 0
         
-  def test_checkRecords_evaluateRecordCheckResult(self):
+  def test_checkRecordIds_evaluateRecordCheckResult(self):
     ## failure: no 'interLibraryLoanInfo'
     bd = BD_Tunneler()
-    bd.check_records_current_record = u'the record id text a'
-    bd.check_records_monitor_responses = [ u'{"irrelevant_key_a": "val_a", "irrelevant_key_b": "val_b"}' ]
-    bd.checkRecords_evaluateRecordCheckResult()
-    assert sorted(bd.check_records_evaluation_results) == [{
+    bd.check_recordids_current_record = u'the record id text a'
+    bd.check_recordids_monitor_responses = [ u'{"irrelevant_key_a": "val_a", "irrelevant_key_b": "val_b"}' ]
+    bd.checkRecordIds_evaluateRecordCheckResult()
+    assert sorted(bd.check_recordids_evaluation_results) == [{
       u'record_id': u'the record id text a', 
-      u'interLibraryLoanInfo': u'no_info'}], sorted(bd.check_records_evaluation_results)
+      u'interLibraryLoanInfo': u'no_info'}], sorted(bd.check_recordids_evaluation_results)
     assert bd.is_requestable == False, bd.is_requestable
     ## failure: 'interLibraryLoanInfo', but not requestable
     bd = BD_Tunneler()
-    bd.check_records_current_record = u'the record id text b'
-    bd.check_records_monitor_responses = [ u'{"interLibraryLoanInfo":[{"requestMessage":["Available at Brown. Go to Josiah."],"RelaisPickupLocation":["Rockefeller Library"],"buttonLink":["http:\\/\\/josiah.brown.edu"],"buttonLabel":["Josiah"],"anyAvailable":["true"]}],"md-date":["1974"],"many_irrelevant_keys": "and_values"}' ]
-    bd.checkRecords_evaluateRecordCheckResult()
-    assert sorted(bd.check_records_evaluation_results) == [{
+    bd.check_recordids_current_record = u'the record id text b'
+    bd.check_recordids_monitor_responses = [ u'{"interLibraryLoanInfo":[{"requestMessage":["Available at Brown. Go to Josiah."],"RelaisPickupLocation":["Rockefeller Library"],"buttonLink":["http:\\/\\/josiah.brown.edu"],"buttonLabel":["Josiah"],"anyAvailable":["true"]}],"md-date":["1974"],"many_irrelevant_keys": "and_values"}' ]
+    bd.checkRecordIds_evaluateRecordCheckResult()
+    assert sorted(bd.check_recordids_evaluation_results) == [{
       u'record_id': u'the record id text b', 
-      u'interLibraryLoanInfo': [{u'anyAvailable': [u'true'], u'buttonLabel': [u'Josiah'], u'buttonLink': [u'http://josiah.brown.edu'], u'requestMessage': [u'Available at Brown. Go to Josiah.'], u'RelaisPickupLocation': [u'Rockefeller Library']}]}], sorted(bd.check_records_evaluation_results)
+      u'interLibraryLoanInfo': [{u'anyAvailable': [u'true'], u'buttonLabel': [u'Josiah'], u'buttonLink': [u'http://josiah.brown.edu'], u'requestMessage': [u'Available at Brown. Go to Josiah.'], u'RelaisPickupLocation': [u'Rockefeller Library']}]}], sorted(bd.check_recordids_evaluation_results)
     assert bd.is_requestable == False, bd.is_requestable
     ## success
     bd = BD_Tunneler()
-    bd.check_records_current_record = u'the record id text c'
-    bd.check_records_monitor_responses = [ u'{"interLibraryLoanInfo":[{"requestMessage":["Request this through Borrow Direct."],"RelaisPickupLocation":["Rockefeller Library"],"buttonLink":["AddRequest"],"buttonLabel":["Request"],"anyAvailable":["true"]}],"md-date":["1974-1999"], "many_irrelevant_keys": "and_values"}' ]
-    bd.checkRecords_evaluateRecordCheckResult()
-    assert sorted(bd.check_records_evaluation_results) == [{
+    bd.check_recordids_current_record = u'the record id text c'
+    bd.check_recordids_monitor_responses = [ u'{"interLibraryLoanInfo":[{"requestMessage":["Request this through Borrow Direct."],"RelaisPickupLocation":["Rockefeller Library"],"buttonLink":["AddRequest"],"buttonLabel":["Request"],"anyAvailable":["true"]}],"md-date":["1974-1999"], "many_irrelevant_keys": "and_values"}' ]
+    bd.checkRecordIds_evaluateRecordCheckResult()
+    assert sorted(bd.check_recordids_evaluation_results) == [{
       u'record_id': u'the record id text c', 
-      u'interLibraryLoanInfo': [{u'anyAvailable': [u'true'], u'buttonLabel': [u'Request'], u'buttonLink': [u'AddRequest'], u'requestMessage': [u'Request this through Borrow Direct.'], u'RelaisPickupLocation': [u'Rockefeller Library']}]}], sorted(bd.check_records_evaluation_results)
+      u'interLibraryLoanInfo': [{u'anyAvailable': [u'true'], u'buttonLabel': [u'Request'], u'buttonLink': [u'AddRequest'], u'requestMessage': [u'Request this through Borrow Direct.'], u'RelaisPickupLocation': [u'Rockefeller Library']}]}], sorted(bd.check_recordids_evaluation_results)
     assert bd.is_requestable == True, bd.is_requestable
     
   # def test_RequestInitiate(self):
@@ -146,7 +146,7 @@ class BdTunnelerTests( unittest.TestCase ):
   #   bd.login()
   #   bd.initiateIsbnSearch()
   #   bd.monitorIsbnSearch()
-  #   bd.checkRecords()
+  #   bd.checkRecordIds()
   #   assert bd.is_requestable != None
   #   bd.requestInitiate()
   #   # print u'\n- bd.__dict__:'; pprint.pprint(bd.__dict__)
@@ -165,7 +165,7 @@ class BdTunnelerTests( unittest.TestCase ):
     
   ## common-case convenience function tests
     
-  def test_Search(self):
+  def test_SearchIsbn(self):
     '''
     Tests common-case wrapper function.
     '''
@@ -178,11 +178,49 @@ class BdTunnelerTests( unittest.TestCase ):
     bd = BD_Tunneler( settings )
     assert bd.found == None, bd.found
     assert bd.is_requestable == None, bd.is_requestable
-    bd.search()
+    bd.searchIsbn()
     assert bd.found == True or bd.found == False, bd.found
     assert bd.is_requestable == True or bd.is_requestable == False, bd.is_requestable
+    
+  def test_SearchString_notFound(self):
+    '''
+    Tests common-case wrapper function.
+    '''
+    settings = {
+      u'BD_API_URL': module_settings.BD_API_URL,
+      u'PATRON_BARCODE': module_settings.LEGIT_PATRON_BARCODE,
+      u'UNIVERSITY_CODE': module_settings.LEGIT_UNIVERSITY_CODE,
+      u'REQUESTED_TITLE': u'aaa', u'REQUESTED_AUTHOR': u'bbb', u'REQUESTED_DATE': u'cccc',
+      u'COMMAND': u'search' } 
+    bd = BD_Tunneler( settings )
+    assert bd.found == None, bd.found
+    assert bd.is_requestable == None, bd.is_requestable
+    bd.searchString()
+    # pprint.pprint( bd.__dict__ )
+    assert u'"@msg":"Record missing"' in bd.check_recordids_initiation_responses[0], bd.check_recordids_initiation_responses  # the no-find indicator
+    assert bd.found == False, bd.found
+    assert bd.is_requestable == False, bd.is_requestable
+    assert bd.request_transaction_num == u'not_applicable', bd.request_transaction_num
+    
+  def test_SearchString_likelyFound(self):
+    '''
+    Tests common-case wrapper function.
+    '''
+    settings = {
+      u'BD_API_URL': module_settings.BD_API_URL,
+      u'PATRON_BARCODE': module_settings.LEGIT_PATRON_BARCODE,
+      u'UNIVERSITY_CODE': module_settings.LEGIT_UNIVERSITY_CODE,
+      u'REQUESTED_TITLE': u'zen', u'REQUESTED_AUTHOR': u'herrigel eugen', u'REQUESTED_DATE': u'1964',  # Zen, http://www.worldcat.org/oclc/382850
+      u'COMMAND': u'search' } 
+    bd = BD_Tunneler( settings )
+    assert bd.found == None, bd.found
+    assert bd.is_requestable == None, bd.is_requestable
+    bd.searchString()
+    assert bd.found == True or bd.found == False, bd.found
+    assert bd.is_requestable == True or bd.is_requestable == False, bd.is_requestable
+
         
-  # def test_Request(self):
+  # def test_RequestIsbn(self):
   #   '''
   #   Tests common-case wrapper function.
   #   WARNING -- THIS WILL REALLY SUBMIT A REQUEST!
@@ -198,7 +236,7 @@ class BdTunnelerTests( unittest.TestCase ):
   #   assert bd.found == None, bd.found
   #   assert bd.is_requestable == None, bd.is_requestable
   #   assert bd.request_transaction_num == None, bd.request_transaction_num
-  #   bd.request()
+  #   bd.requestIsbn()
   #   assert bd.found == True or bd.found == False, bd.found
   #   assert bd.is_requestable == True or bd.is_requestable == False, bd.is_requestable
   #   assert bd.request_transaction_num == u'unknown' or bd.request_transaction_num[0:3] == u'BRO', bd.request_transaction_num

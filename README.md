@@ -28,10 +28,11 @@ Common usage
         ...   u'BD_API_URL': u'the-url',
         ...   u'PATRON_BARCODE': u'the-barcode',
         ...   u'UNIVERSITY_CODE': u'the-university-code',
-        ...   u'REQUESTED_ISBN': u'the-isbn',
+        ...   u'REQUESTED_ISBN': u'the-isbn',  
+        ...   # or u'REQUESTED_TITLE': u'the title', u'REQUESTED_AUTHOR': u'last first', u'REQUESTED_DATE': u'1234',
         ...   u'COMMAND': u'search' } 
         >>> bd = BD_Tunneler( settings )  # at this point bd.found & bd.is_requestable are None
-        >>> bd.search()
+        >>> bd.searchIsbn()  # or bd.SearchString()
         >>> bd.found
         True  # or False
         >>> bd.is_requestable
@@ -44,17 +45,19 @@ Common usage
         ...   u'BD_API_URL': u'the-url',
         ...   u'PATRON_BARCODE': u'the-barcode',
         ...   u'UNIVERSITY_CODE': u'the-university-code',
-        ...   u'REQUESTED_ISBN': u'the-isbn',
+        ...   u'REQUESTED_ISBN': u'the-isbn',  
+        ...   # or u'REQUESTED_TITLE': u'the title', u'REQUESTED_AUTHOR': u'last first', u'REQUESTED_DATE': u'1234',
         ...   u'COMMAND': u'request',
         ...   u'REQUEST_PICKUP_LOCATION': u'the-pickup-location' } 
         >>> bd = BD_Tunneler( settings )
-        >>> bd.request()
+        >>> bd.requestIsbn()  # or bd.RequestString()
         ## if requestable...
         >>> bd.request_transaction_num
         u'BRO-123'  # bd.found & bd.requestable would be True
         ## if not requestable...
         >>> bd.request_transaction_num
         u'not_applicable'  # bd.found could be True or False; bd.is_requestable would be False
+        
 
 ---
 
@@ -62,13 +65,19 @@ Common usage
 Notes
 =====
 
-- BorrowDirect api flow:
+- BorrowDirect api flow for isbn-search:
     - login
     - initiate isbn search
     - monitor isbn search results to get record-ids
     - loop through record-ids
         - initiate record-id search
         - monitor record-id search results to determine if item is requestable
+    - request item
+    
+- BorrowDirect api flow for string-search:
+    - login
+    - initiate record-id search
+    - monitor record-id search results to determine if item is requestable
     - request item
 
 - \_\_init\_\_() attributes, and module functions, are ordered via above api flow.
@@ -81,7 +90,7 @@ Notes
 
             >>> bd = BD_Tunneler()
             >>> bd.BD_API_URL = u'a'; bd.PATRON_BARCODE = u'b'; bd.UNIVERSITY_CODE = u'c'; etc...
-            >>> bd.request()
+            >>> bd.requestIsbn()
             
   - ...or settings & attribute-assignments can be mixed & matched.
 
@@ -98,7 +107,16 @@ Notes
 
 - dependencies: the wonderful [requests](http://docs.python-requests.org/en/latest/index.html) module.
 
-- updated for 2012-08-08 BorrowDirect upgrade.
+- searching by string:
+
+  - title and author must be lowercase, and contain no punctuation
+  - author must be: last first (and middle initial if it's in the worldcat openurl)
+  - date must be four characters
+  
+- milestones
+
+  - 2012-08 -- updated for 2012-08 BorrowDirect upgrade.
+  - 2012-09 -- added limited title/author/date string searching.
 
 - contact info: 
     - borrowdirect/library info: bonnie_buzzell@brown.edu, knowledge-systems librarian

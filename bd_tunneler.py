@@ -83,6 +83,9 @@ class BD_Tunneler(object):
     self.PATRON_BARCODE = None if ( u'PATRON_BARCODE' not in dir(settings) ) else settings.PATRON_BARCODE
     self.UNIVERSITY_CODE = None if ( u'UNIVERSITY_CODE' not in dir(settings) ) else settings.UNIVERSITY_CODE
     self.REQUESTED_ISBN = None if ( u'REQUESTED_ISBN' not in dir(settings) ) else settings.REQUESTED_ISBN
+    self.REQUESTED_TITLE = None if ( u'REQUESTED_TITLE' not in dir(settings) ) else settings.REQUESTED_TITLE
+    self.REQUESTED_AUTHOR = None if ( u'REQUESTED_AUTHOR' not in dir(settings) ) else settings.REQUESTED_AUTHOR
+    self.REQUESTED_DATE = None if ( u'REQUESTED_DATE' not in dir(settings) ) else settings.REQUESTED_DATE    
     self.log = [ u'- instantiated %s' % unicode(datetime.datetime.now())[0:10] ]
     self.cookies_recent = None  # dict with most recent cookie
     self.cookies_history = []
@@ -105,16 +108,16 @@ class BD_Tunneler(object):
     self.monitor_search_recids_found = None
     self.found = None  # may end up True or False as result of monitor-search logic
     ## record-id search ( ascertain if requestable )
-    self.check_records_current_record = None
-    self.check_records_initiation_urls = []  # url same for record-check-monitoring
-    self.check_records_initiation_responses = []
-    self.CHECK_RECORDS_MONITOR_INTERVAL = 2 if ( u'RECORDS_CHECK_MONITOR_INTERVAL' not in dir(settings) ) else settings.RECORDS_CHECK_MONITOR_INTERVAL
-    self.CHECK_RECORDS_MONITOR_TIMEOUT = 60 if ( u'RECORDS_CHECK_MONITOR_TIMEOUT' not in dir(settings) ) else settings.RECORDS_CHECK_MONITOR_TIMEOUT
-    self.check_records_monitor_current_start_time = None
-    self.check_records_monitor_current_end_time = None
-    self.check_records_monitor_timetaken_results = []  # each: {u'entry_name': val, u'starttime': val, u'endtime': val, u'timetaken': val}
-    self.check_records_monitor_responses = []
-    self.check_records_evaluation_results = []
+    self.check_recordids_current_record = None
+    self.check_recordids_initiation_urls = []  # url same for record-check-monitoring
+    self.check_recordids_initiation_responses = []
+    self.CHECK_RECORDIDS_MONITOR_INTERVAL = 2 if ( u'RECORDS_CHECK_MONITOR_INTERVAL' not in dir(settings) ) else settings.RECORDS_CHECK_MONITOR_INTERVAL
+    self.CHECK_RECORDIDS_MONITOR_TIMEOUT = 60 if ( u'RECORDS_CHECK_MONITOR_TIMEOUT' not in dir(settings) ) else settings.RECORDS_CHECK_MONITOR_TIMEOUT
+    self.check_recordids_monitor_current_start_time = None
+    self.check_recordids_monitor_current_end_time = None
+    self.check_recordids_monitor_timetaken_results = []  # each: {u'entry_name': val, u'starttime': val, u'endtime': val, u'timetaken': val}
+    self.check_recordids_monitor_responses = []
+    self.check_recordids_evaluation_results = []
     self.is_requestable = None  # may end up True or False as result of check-records logic
     ## request
     self.request_url = None
@@ -228,110 +231,122 @@ class BD_Tunneler(object):
     self.found = False if len(self.monitor_search_recids_found) == 0 else True
     if self.found == False:
       self.is_requestable = False
+      self.request_transaction_num = u'not_applicable'
     self.monitor_search_time_taken = datetime.datetime.now() - self.monitor_search_start_time
     return
+        
     
-    
-  def checkRecords( self ):
+  def checkRecordIds( self ):
     '''
     Purpose: A wrapper function; for each self.monitor_search_recids_found entry, 
              - initiates the 'record' api search
              - calls the monitor-record-check function to see if there are still active clients
              - calls the evaluate-record-check function after above to see if the item is requestable
+    Called by: searchIsbn()
     '''
     import time
     assert self.found == True, Exception( u'self.found should be True; it is: %s' % self.found )
     assert len(self.monitor_search_recids_found) > 0 and type(self.monitor_search_recids_found) == list, Exception( u'self.monitor_search_recids_found must be a populated list; it is %s' % self.monitor_search_recids_found )
     for entry in self.monitor_search_recids_found:
-      self.check_records_current_record = entry
+      self.check_recordids_current_record = entry
       ## initiate record-check
-      self.checkRecords_initiateRecordCheck()
+      self.checkRecordIds_initiateRecordCheck()
       ## monitor record-check
-      self.checkRecords_monitorRecordCheck()
+      self.checkRecordIds_monitorRecordCheck()
       ## evaluate record-check result
-      self.checkRecords_evaluateRecordCheckResult()
+      self.checkRecordIds_evaluateRecordCheckResult()
       if self.is_requestable == True:
         break
     return
     
     
-  def checkRecords_initiateRecordCheck( self ):
+  def checkRecordIds_initiateRecordCheck( self ):
     '''
     Purpose: Initiates record search.
-    Called by: checkRecords()
-    ''' 
-    assert type(self.check_records_current_record) == unicode, Exception( u'self.check_records_current_record must be a unicode string; it is of type: %s' % type(check_records_current_record) )
-    payload = {
+    Called by: checkRecordIds()
+    '''    
+    if self.REQUESTED_ISBN != None:  # go with isbn flow
+      assert type(self.check_recordids_current_record) == unicode, Exception( u'self.check_recordids_current_record must be a unicode string; it is of type: %s' % type(check_recordids_current_record) )
+      payload = {
+        u'command': u'record',
+        u'id': self.check_recordids_current_record,
+        u'type': u'json' }
+    else:
+      payload = {
       u'command': u'record',
-      u'id': self.check_records_current_record,
-      u'type': u'json' }
-    r = requests.get( self.BD_API_URL, cookies=self.cookies_recent, params=payload, verify=False )
-    self.check_records_initiation_urls.append( r.url )
+      u'id': u'content: author %s date %s title %s medium book' % ( self.REQUESTED_AUTHOR, self.REQUESTED_DATE, self.REQUESTED_TITLE ),
+      u'type': u'json',
+      u'recordquery': u'ti="%s" and au="%s"' % ( self.REQUESTED_TITLE, self.REQUESTED_AUTHOR )
+      }
+    r = requests.get( self.BD_API_URL, cookies=self.cookies_recent, params=payload, verify=False, timeout=self.CHECK_RECORDIDS_MONITOR_TIMEOUT )
+    self.check_recordids_initiation_urls.append( r.url )
     self.cookies_recent = self.makeCookieDict( r )
-    self.cookies_history.append( {u'check_records_initiation': self.cookies_recent} )
-    self.check_records_initiation_responses.append( r.content.decode(u'utf-8', u'replace') )
-    return
+    self.cookies_history.append( {u'check_recordids_initiation': self.cookies_recent} )
+    self.check_recordids_initiation_responses.append( r.content.decode(u'utf-8', u'replace') )    
+    return    
+  
     
-    
-  def checkRecords_monitorRecordCheck( self ):
+  def checkRecordIds_monitorRecordCheck( self ):
     '''
     Purpose: Execute a followup record-search query & monitor results until there are no more bd-active-clients or until timeout.
-    Called by: checkRecords()
+    Called by: checkRecordIds()
     '''
-    assert isinstance(self.check_records_initiation_urls[-1], unicode), Exception( u'self.check_records_initiation_urls[-1] must be of type unicode; it is of type %s' % type(self.check_records_initiation_urls[-1]) )
-    assert isinstance(self.CHECK_RECORDS_MONITOR_TIMEOUT, int), Exception( u'self.CHECK_RECORDS_MONITOR_TIMEOUT must be of type int; it is of type %s' % type(self.CHECK_RECORDS_MONITOR_TIMEOUT) )
-    assert isinstance(self.CHECK_RECORDS_MONITOR_INTERVAL, int), Exception( u'self.CHECK_RECORDS_MONITOR_INTERVAL must be of type int; it is of type %s' % type(self.CHECK_RECORDS_MONITOR_INTERVAL) )
+    assert isinstance(self.check_recordids_initiation_urls[-1], unicode), Exception( u'self.check_recordids_initiation_urls[-1] must be of type unicode; it is of type %s' % type(self.check_recordids_initiation_urls[-1]) )
+    assert isinstance(self.CHECK_RECORDIDS_MONITOR_TIMEOUT, int), Exception( u'self.CHECK_RECORDIDS_MONITOR_TIMEOUT must be of type int; it is of type %s' % type(self.CHECK_RECORDIDS_MONITOR_TIMEOUT) )
+    assert isinstance(self.CHECK_RECORDIDS_MONITOR_INTERVAL, int), Exception( u'self.CHECK_RECORDIDS_MONITOR_INTERVAL must be of type int; it is of type %s' % type(self.CHECK_RECORDIDS_MONITOR_INTERVAL) )
     ## check existing response
-    jd = json_dict = json.loads( self.check_records_initiation_responses[-1], strict=False )
+    # print u'- in checkRecordIds_monitorRecordCheck();'; pprint.pprint( self.__dict__ )
+    jd = json_dict = json.loads( self.check_recordids_initiation_responses[-1], strict=False )
     if jd[u'activeclients'] == [u'0']:  # done; no need to monitor
       return
     ## get & monitor subsequent responses if necessary
-    self.check_records_monitor_current_start_time = datetime.datetime.now()
-    self.check_records_monitor_current_end_time = self.check_records_monitor_current_start_time + datetime.timedelta( seconds=self.CHECK_RECORDS_MONITOR_TIMEOUT )
+    self.check_recordids_monitor_current_start_time = datetime.datetime.now()
+    self.check_recordids_monitor_current_end_time = self.check_recordids_monitor_current_start_time + datetime.timedelta( seconds=self.CHECK_RECORDIDS_MONITOR_TIMEOUT )
     continue_flag = u'continue'
     while continue_flag == u'continue':
-      r = requests.get( self.check_records_initiation_urls[-1], cookies=self.cookies_recent, verify=False )  # url with parameters set in checkRecords_initiateRecordCheck()
+      r = requests.get( self.check_recordids_initiation_urls[-1], cookies=self.cookies_recent, verify=False, timeout=self.CHECK_RECORDIDS_MONITOR_TIMEOUT )  # url with parameters set in checkRecordIds_initiateRecordCheck()
       self.cookies_recent = self.makeCookieDict(r)
-      self.cookies_history.append( {u'check_records_monitor': self.cookies_recent} )
-      self.check_records_monitor_responses.append( r.content.decode(u'utf-8', u'replace') )
-      jd = json_dict = json.loads( self.check_records_monitor_responses[-1], strict=False )
-      if jd[u'activeclients'] == [u'0'] or datetime.datetime.now() > self.check_records_monitor_current_end_time:
+      self.cookies_history.append( {u'check_recordids_monitor': self.cookies_recent} )
+      self.check_recordids_monitor_responses.append( r.content.decode(u'utf-8', u'replace') )
+      jd = json_dict = json.loads( self.check_recordids_monitor_responses[-1], strict=False )
+      if jd[u'activeclients'] == [u'0'] or datetime.datetime.now() > self.check_recordids_monitor_current_end_time:
         continue_flag = u'stop'
-        self.check_records_monitor_timetaken_results.append( datetime.datetime.now() - self.check_records_monitor_current_start_time )
+        self.check_recordids_monitor_timetaken_results.append( datetime.datetime.now() - self.check_recordids_monitor_current_start_time )
       else:
-        time.sleep( self.CHECK_RECORDS_MONITOR_INTERVAL )
+        time.sleep( self.CHECK_RECORDIDS_MONITOR_INTERVAL )
     return
     
     
-  def checkRecords_evaluateRecordCheckResult( self ):
+  def checkRecordIds_evaluateRecordCheckResult( self ):
     '''
-    Purpose: Examine the recent check_records_monitor_responses entry to see if the item is requestable.
-    Called by: checkRecords()
+    Purpose: Examine the recent check_recordids_monitor_responses entry to see if the item is requestable.
+    Called by: checkRecordIds()
     '''
-    assert len(self.check_records_monitor_responses) > 0 and type(self.check_records_monitor_responses) == list, Exception( u'self.check_records_monitor_responses must be a populated list; it is %s' % self.check_records_monitor_responses )
-    jd = json_dict = json.loads( self.check_records_monitor_responses[-1], strict=False )
+    assert len(self.check_recordids_monitor_responses) > 0 and type(self.check_recordids_monitor_responses) == list, Exception( u'self.check_recordids_monitor_responses must be a populated list; it is %s' % self.check_recordids_monitor_responses )
+    jd = json_dict = json.loads( self.check_recordids_monitor_responses[-1], strict=False )
     if u'interLibraryLoanInfo' in jd.keys():
       if u'buttonLabel' in jd[u'interLibraryLoanInfo'][0].keys():
         if jd[u'interLibraryLoanInfo'][0][u'buttonLabel'] == [u'Request']:
           if u'buttonLink' in jd[u'interLibraryLoanInfo'][0].keys():
             if jd[u'interLibraryLoanInfo'][0][u'buttonLink'] == [u'AddRequest']:
-              self.check_records_evaluation_results.append( { 
-                u'record_id': self.check_records_current_record,
+              self.check_recordids_evaluation_results.append( { 
+                u'record_id': self.check_recordids_current_record,
                 u'interLibraryLoanInfo': jd[u'interLibraryLoanInfo']
                 } )
               self.is_requestable = True
     if not self.is_requestable == True:
       if u'interLibraryLoanInfo' in jd.keys():
-        self.check_records_evaluation_results.append( { 
-          u'record_id': self.check_records_current_record,
+        self.check_recordids_evaluation_results.append( { 
+          u'record_id': self.check_recordids_current_record,
           u'interLibraryLoanInfo': jd[u'interLibraryLoanInfo']  # for future examination
           } )
       else:
-        self.check_records_evaluation_results.append( { 
-          u'record_id': self.check_records_current_record,
+        self.check_recordids_evaluation_results.append( { 
+          u'record_id': self.check_recordids_current_record,
           u'interLibraryLoanInfo': u'no_info'
           } )
       self.is_requestable = False
+      self.request_transaction_num = u'not_applicable'
     return    
     
     
@@ -375,10 +390,10 @@ class BD_Tunneler(object):
   ## common-case wrapper functions
   
   
-  def request( self ):
+  def requestIsbn( self ):
     '''
     Purpose: Convenience wrapper function which performs isbn search 
-             and attempts to request item if it's requestable
+             and attempts to request item if it's requestable.
     '''
     assert len(self.BD_API_URL) > 0 and type(self.BD_API_URL) == unicode, Exception( u'self.BD_API_URL requires a unicode string; it is %s' % self.BD_API_URL )
     assert len(self.PATRON_BARCODE) > 0 and type(self.PATRON_BARCODE) == unicode, Exception( u'self.PATRON_BARCODE requires a unicode string; it is %s' % self.PATRON_BARCODE )
@@ -388,17 +403,47 @@ class BD_Tunneler(object):
     assert len(self.REQUEST_PICKUP_LOCATION) > 0 and type(self.REQUEST_PICKUP_LOCATION) == unicode, Exception( u'self.REQUEST_PICKUP_LOCATION requires a unicode string; it is of type %s' % type(self.REQUEST_PICKUP_LOCATION) )
     self.login()
     self.initiateIsbnSearch()
-    self.monitorIsbnSearch()
+    self.monitorIsbnSearch()  # sets self.found if search is False, and if so, sets self.is_requestable & self.request_transaction_num
     if self.found == True:
-      self.checkRecords()  # sets self.is_requestable
-    else:
-      self.request_transaction_num = u'not_applicable'
+      self.checkRecordIds()  # sets self.is_requestable, and if False, sets self.request_transaction_num
+    # else:
+    #   self.request_transaction_num = u'not_applicable'
     if self.is_requestable:
       self.requestInitiate()  # sets self.request_transaction_num
     return
-
-  
-  def search( self ):
+    
+    
+  def requestString( self ):
+    '''
+    Purpose: Convenience wrapper function which performs string search 
+             and attempts to request item if it's requestable.
+    '''
+    assert len(self.BD_API_URL) > 0 and type(self.BD_API_URL) == unicode, Exception( u'self.BD_API_URL requires a unicode string; it is %s' % self.BD_API_URL )
+    assert len(self.PATRON_BARCODE) > 0 and type(self.PATRON_BARCODE) == unicode, Exception( u'self.PATRON_BARCODE requires a unicode string; it is %s' % self.PATRON_BARCODE )
+    assert len(self.UNIVERSITY_CODE) > 0 and type(self.UNIVERSITY_CODE) == unicode, Exception( u'self.UNIVERSITY_CODE requires a unicode string; it is %s' % self.UNIVERSITY_CODE )
+    assert len(self.REQUESTED_TITLE) > 0 and type(self.REQUESTED_TITLE) == unicode, Exception( u'self.REQUESTED_TITLE requires a unicode string; it is %s' % self.REQUESTED_TITLE )
+    assert len(self.REQUESTED_AUTHOR) > 0 and type(self.REQUESTED_AUTHOR) == unicode, Exception( u'self.REQUESTED_AUTHOR requires a unicode string; it is %s' % self.REQUESTED_AUTHOR )
+    assert len(self.REQUESTED_DATE) == 4 and type(self.REQUESTED_DATE) == unicode, Exception( u'self.REQUESTED_DATE requires a 4-character unicode string; it is %s' % self.REQUESTED_DATE )
+    assert self.COMMAND == u'request', Exception( u'self.COMMAND must be u"search"; it is %s' % self.COMMAND )
+    self.login()
+    self.checkRecordIds_initiateRecordCheck()
+    assert type(self.check_recordids_initiation_responses) == list, type(self.check_recordids_initiation_responses)
+    # print self.check_recordids_initiation_responses
+    if u'Record missing' in self.check_recordids_initiation_responses[-1]:
+      self.found = False
+      self.is_requestable = False
+      self.request_transaction_num = u'not_applicable'
+      return
+    else:
+      self.found = True
+    self.checkRecordIds_monitorRecordCheck()
+    self.checkRecordIds_evaluateRecordCheckResult()  # sets self.is_requestable; if False, sets self.request_transaction_num
+    if self.is_requestable:
+      self.requestInitiate()  # sets self.request_transaction_num
+    return
+           
+    
+  def searchIsbn( self ):
     '''
     Purpose: Convenience wrapper function which performs isbn search 
              and sets self.found & self.is_requestable
@@ -410,11 +455,39 @@ class BD_Tunneler(object):
     assert self.COMMAND == u'search', Exception( u'self.COMMAND must be u"search"; it is %s' % self.COMMAND )
     self.login()
     self.initiateIsbnSearch()
-    self.monitorIsbnSearch()
+    self.monitorIsbnSearch()  # sets self.found if search is False, and if so, sets self.is_requestable & self.request_transaction_num
     if self.found == True:
-      self.checkRecords()  # sets self.is_requestable
+      self.checkRecordIds()  # sets self.is_requestable
     return
     
+    
+  def searchString( self ):
+    '''
+    Purpose: Convenience wrapper function which performs string search 
+             and sets self.found & self.is_requestable
+    '''
+    assert len(self.BD_API_URL) > 0 and type(self.BD_API_URL) == unicode, Exception( u'self.BD_API_URL requires a unicode string; it is %s' % self.BD_API_URL )
+    assert len(self.PATRON_BARCODE) > 0 and type(self.PATRON_BARCODE) == unicode, Exception( u'self.PATRON_BARCODE requires a unicode string; it is %s' % self.PATRON_BARCODE )
+    assert len(self.UNIVERSITY_CODE) > 0 and type(self.UNIVERSITY_CODE) == unicode, Exception( u'self.UNIVERSITY_CODE requires a unicode string; it is %s' % self.UNIVERSITY_CODE )
+    assert len(self.REQUESTED_TITLE) > 0 and type(self.REQUESTED_TITLE) == unicode, Exception( u'self.REQUESTED_TITLE requires a unicode string; it is %s' % self.REQUESTED_TITLE )
+    assert len(self.REQUESTED_AUTHOR) > 0 and type(self.REQUESTED_AUTHOR) == unicode, Exception( u'self.REQUESTED_AUTHOR requires a unicode string; it is %s' % self.REQUESTED_AUTHOR )
+    assert len(self.REQUESTED_DATE) == 4 and type(self.REQUESTED_DATE) == unicode, Exception( u'self.REQUESTED_DATE requires a 4-character unicode string; it is %s' % self.REQUESTED_DATE )
+    assert self.COMMAND == u'search', Exception( u'self.COMMAND must be u"search"; it is %s' % self.COMMAND )
+    self.login()
+    self.checkRecordIds_initiateRecordCheck()
+    assert type(self.check_recordids_initiation_responses) == list, type(self.check_recordids_initiation_responses)
+    # print self.check_recordids_initiation_responses
+    if u'Record missing' in self.check_recordids_initiation_responses[-1]:
+      self.found = False
+      self.is_requestable = False
+      self.request_transaction_num = u'not_applicable'
+      return
+    else:
+      self.found = True
+    self.checkRecordIds_monitorRecordCheck()
+    self.checkRecordIds_evaluateRecordCheckResult()
+    return
+        
 
   ## helper functions ##
   
@@ -431,7 +504,7 @@ class BD_Tunneler(object):
     
   def updateRecordIdsFound( self, json_string, found_list ):
     '''
-    - Updates found_list with new recid entries.
+    Updates found_list with new recid entries.
     '''
     assert type(json_string) == unicode, Exception( u'json_string must be of type unicode; it is %s' % type(json_string) )
     assert type(found_list) == NoneType or type(found_list) == list, Exception( u'found_list must be of type NoneType or list; it is %s' % type(found_list) )
