@@ -1,4 +1,10 @@
-_( formatted in [markdown](http://daringfireball.net/projects/markdown/) )_
+Deprecated
+==========
+
+This code works and is still in production, but is being replace by [new code](https://github.com/Brown-University-Library/borrowdirect.py) that accesses the official BorrowDirect api.
+
+---
+
 
 About
 =====
