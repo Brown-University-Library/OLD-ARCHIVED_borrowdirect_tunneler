@@ -1,7 +1,9 @@
-Deprecated
-==========
+Obsolete
+========
 
-This code works and is still in production, but is being replace by [new code](https://github.com/Brown-University-Library/borrowdirect.py) that accesses the official BorrowDirect api.
+This code has been replaced by [new code](https://github.com/Brown-University-Library/borrowdirect.py) that accesses the official BorrowDirect api.
+
+The code remains here for now for archival purposes.
 
 ---
 
